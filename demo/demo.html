@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WSLobby demo</title>
+    <script src="//cdn.rawgit.com/dcodeIO/protobuf.js/6.11.2/dist/protobuf.js"></script>
+    <script type="text/javascript" src="wslobby.js"></script>
+</head>
+<body>
+<div data-screen="connect">
+    <div>
+        <h5>WsLobby demo - disconnected</h5>
+    </div>
+    <div>
+        Lobby: <input type="text" id="url" value="ws://127.0.0.1:8081/lobby">
+    </div>
+    <div>
+        Identity: <input type="text" id="identity">
+    </div>
+    <div>
+        Token: <input type="text" id="token">
+    </div>
+    <div>
+        Role: <select id="role">
+        <option value="host" selected>Host</option>
+        <option value="guest">Guest</option>
+    </select>
+    </div>
+    <div>
+        <button type="button" onclick="connect()">Connect</button>
+    </div>
+</div>
+<div data-screen="hpostauth" style="display:none">
+    <h5>Authorized as host</h5>
+    <div>
+        Room:
+        <input type="text" id="hroomid">
+    </div>
+    <div>
+        <button type="button" onclick="claimroom()">Claim room</button>
+    </div>
+</div>
+<div data-screen="gpostauth" style="display:none">
+    <div>
+        <h5>Authorized as guest</h5>
+    </div>
+    <div>
+        Room:
+        <input type="text" id="groomid">
+    </div>
+    <div>
+        Greeting:
+        <input type="text" id="ggreet" value="Hello!">
+    </div>
+    <div>
+        <button type="button" onclick="joinroom()">Join room</button>
+    </div>
+</div>
+<div data-screen="knock" style="display: none">
+    <h5>Knocking...</h5>
+</div>
+<div data-screen="hroom" style="display: none">
+    <h5>In room <span data-room></span> (host)</h5>
+    <div>
+        Message (json):
+        <input type="text" id="hmsg" value="&quot;Boo!&quot;">
+    </div>
+    <div>Guests:</div>
+    <div id="guests">
+        <label><input type="radio" name="guestid" value="" checked> Message all</label>
+    </div>
+    <div>
+        <button type="button" onclick="message()">Send</button>
+    </div>
+</div>
+<div data-screen="groom" style="display: none">
+    <h5>In room <span data-room></span> (guest)</h5>
+    <div>
+        Message (json):
+        <input type="text" id="gmsg" value="&quot;Boo!&quot;">
+    </div>
+    <div>
+        <button type="button" onclick="message()">Send</button>
+    </div>
+</div>
+<pre id="log"></pre>
+<script type="text/javascript">
+	function Q(selector) {
+		return document.querySelector(selector)
+	}
+
+	function QA(selector) {
+		return document.querySelectorAll(selector)
+	}
+
+	const {Role, Command, Reply} = wslobby.wslobby;
+
+	function randstring(len = 16) {
+		const CH = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+		let s = "";
+		while (len-- > 0) s += CH[(Math.random() * CH.length) | 0];
+		return s;
+	}
+
+	Q("#identity").value = localStorage["wslobby-demo-identity"] || randstring();
+	Q("#token").value = localStorage["wslobby-demo-token"] || randstring();
+	Q("#hroomid").value = localStorage["wslobby-demo-room"] || randstring();
+	Q("#groomid").value = localStorage["wslobby-demo-room"] || "";
+	let socket;
+	let mid = (Math.random() * (1 << 30)) | 0;
+	let out = {};
+	let role = -1;
+
+	function log() {
+		let p = Q("#log");
+		for (let a of arguments) {
+			if (typeof a === "object") {
+				if (Object.getPrototypeOf(a) === Object.prototype) {
+					p.append(JSON.stringify(a));
+				} else if ("toString" in a && typeof a.toString === "function") {
+					p.append(a.toString());
+				} else {
+					p.append("" + a);
+				}
+			} else {
+				p.append("" + a);
+			}
+			p.append(" ");
+		}
+		p.append("\n");
+	}
+
+	function screen(s) {
+		QA("[data-screen]").forEach(e => e.style.display = "none");
+		if (s) {
+			Q("[data-screen=" + s + "]").style.display = "";
+		}
+	}
+
+	function compose(clazz, msg) {
+		let error = clazz.verify(msg);
+		if (error) {
+			log("ERROR>", error);
+			throw new Error(error);
+		}
+		let encmsg = clazz.create(msg);
+		console.log(">", encmsg.toJSON());
+		return clazz.encode(encmsg).finish();
+	}
+
+	function send(msg) {
+		socket.send(compose(Command, msg));
+	}
+
+	function connect() {
+		if (socket) socket.close();
+		screen();
+		let url = Q("#url").value;
+		let token = Q("#token").value;
+		role = {host: Role.HOST, guest: Role.GUEST}[Q("#role").value];
+		let identity = Q("#identity").value;
+		localStorage["wslobby-demo-identity"] = identity;
+		localStorage["wslobby-demo-token"] = token;
+		log("Connecting to", url);
+		socket = new WebSocket(url, "wslobby1");
+
+		function reset(sock) {
+			if (socket === sock) socket = null;
+			if (!socket) {
+				screen("connect");
+			}
+		}
+
+		socket.onclose = function (e) {
+			log("Closed", e.code, e.reason);
+			reset(this);
+		}
+		socket.onerror = function (e) {
+			log("Error", e)
+			reset(this);
+		}
+		socket.onmessage = async function (m) {
+			/**
+			 * @type {Blob}
+			 */
+			let blob = m.data
+			let ab = await blob.arrayBuffer();
+			let msg = Reply.decode(new Uint8Array(ab))
+			console.log("<", msg.toJSON());
+			let imid = msg.id;
+			switch (msg.payload) {
+				case "ack": {
+					let ackd = out[imid];
+					switch (ackd) {
+						case "identify":
+							log("Authorized!");
+							if (role === Role.HOST) {
+								screen("hpostauth");
+							} else {
+								screen("gpostauth");
+							}
+							break;
+					}
+					delete out[imid];
+					break;
+				}
+				case "enteredRoom": {
+					if (msg.enteredRoom.hostId === identity) {
+						log("Claimed!");
+						screen("hroom");
+					} else {
+						log("Allowed, host is ",msg.enteredRoom.hostId);
+						screen("groom");
+					}
+					QA("[data-room]").forEach(e=>e.textContent = msg.enteredRoom.roomId)
+					break;
+                }
+				case "error": {
+					let ackd = out[imid];
+					switch (ackd) {
+						case "identify":
+							log("Authorization failed!", msg.error.message);
+							break;
+						case "claim":
+							log("Room claim failed!", msg.error.message);
+							break;
+						case "join":
+							log("Room join failed!", msg.error.message);
+							break;
+					}
+					break;
+				}
+				case "guestKnock": {
+					let allowed = Math.random() > 0.1;
+					let guestId = msg.guestKnock.guestId;
+					log("Guest", guestId, "knocks and says", msg.guestKnock.greeting);
+					if (allowed) {
+						log("Letting in");
+						let div = document.createElement("div");
+						div.dataset.guest = guestId;
+						div.innerHTML = `<label><input type="radio" name="guestid" value="${guestId}">${guestId}</label>`
+						Q("#guests").append(div);
+						send({
+							id: mid++,
+							allowGuest: {
+								guestId: guestId
+							}
+						})
+					} else {
+						log("Entry denied");
+						send({
+							id: mid++,
+							kickGuest: {
+								guestId: guestId,
+								message: "RNG says no"
+							}
+						})
+					}
+					break;
+				}
+				case "guestLeft": {
+					log("Guest", msg.guestLeft.guestId, "left with", msg.guestLeft.goodbye);
+					Q("[data-guest="+msg.guestLeft.guestId+"]").remove();
+					break;
+				}
+				case "data": {
+					let json = JSON.parse(new TextDecoder().decode(msg.data.data));
+					log("Message from", msg.data.senderId, ": ", json);
+					break;
+				}
+				default:
+					log("ERROR Unsupported message type ",msg.payload);
+					socket.close();
+			}
+		}
+		socket.onopen = function () {
+			log("Open");
+			out[mid] = "identify";
+			send({
+				id: mid++,
+				identify: {
+					identity: identity,
+					token: token,
+					role: role
+				}
+			});
+		}
+	}
+
+	function claimroom() {
+		screen();
+		let roomid = Q("#hroomid").value;
+		localStorage["wslobby-demo-room"] = roomid;
+		send({
+			id: mid++,
+			claimRoom: {
+				roomId: roomid
+			}
+		});
+	}
+
+	function joinroom() {
+		screen();
+		let roomid = Q("#groomid").value;
+		localStorage["wslobby-demo-room"] = roomid;
+		send({
+			id: mid++,
+			joinRoom: {
+				roomId: '' + roomid,
+				greeting: '' + Q("#ggreet").value
+			}
+		})
+	}
+
+	function message() {
+		let text,guestId;
+		if (role === Role.HOST) {
+			text = Q("#hmsg").value;
+			guestId = Q("[name=guestid]:checked").value;
+		} else {
+			text = Q("#gmsg").value;
+        }
+		let data = new TextEncoder().encode(text);
+		let msg = {id:mid++};
+		if (guestId) {
+			msg.unicast = {
+				guestId:guestId,
+                data:data
+            }
+        } else {
+			msg.broadcast = {
+				data:data
+            }
+        }
+		send(msg)
+	}
+</script>
+</body>
+</html>

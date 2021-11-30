@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package wslobby;
+
+enum Role {
+  HOST = 0;
+  GUEST = 1;
+}
+
+message Command {
+  uint32 id = 1;
+  oneof payload {
+    Ping ping = 2;
+    Identify identify = 3;
+    ClaimRoom claimRoom = 4;
+    JoinRoom joinRoom = 5;
+    Leave leave = 6;
+    KickGuest kickGuest = 7;
+    AllowGuest allowGuest = 8;
+    Broadcast broadcast = 9;
+    Unicast unicast = 10;
+  }
+  message Ping {
+  }
+  message Identify {
+    string identity = 1;
+    string token = 2;
+    Role role = 3;
+  }
+  message ClaimRoom {
+    string roomId = 2;
+  }
+  message JoinRoom {
+    string roomId = 1;
+    string greeting = 2;
+  }
+  message Leave {
+    string goodbye = 1;
+  }
+  message KickGuest {
+    string guestId = 1;
+    string message = 2;
+  }
+  message AllowGuest {
+    string guestId = 1;
+  }
+  message Broadcast {
+    bytes data = 1;
+  }
+  message Unicast {
+    string guestId = 1;
+    bytes data = 2;
+  }
+}
+
+message Reply {
+  uint32 id = 1;
+  oneof payload {
+    Pong pong = 2;
+    Ack ack = 3;
+    Error error = 4;
+    GuestKnock guestKnock = 5;
+    GuestLeft guestLeft = 6;
+    /*EnteredRoom enteredRoom = 7;*/
+    Data data = 8;
+  }
+  message Pong {}
+  message Ack {}
+  message Error {
+    string message = 1;
+  }
+  message GuestKnock {
+    string guestId = 1;
+    string greeting = 2;
+  }
+  message GuestLeft {
+    string guestId = 1;
+    optional string goodbye = 2;
+  }
+  message EnteredRoom {
+    string roomId = 1;
+    string hostId = 2;
+  }
+  message Data {
+    string senderId = 1;
+    bytes data = 2;
+  }
+}
