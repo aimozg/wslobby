@@ -38,10 +38,11 @@ let authEngine: LobbyAuth = {
 	}
 };
 
+let port = parseInt(process.env.PORT || "8081");
 const server = new LobbyServer({
 	ws: {
 		host: "0.0.0.0",
-		port: 8081,
+		port: port,
 		path: "/lobby"
 	},
 	auth: authEngine

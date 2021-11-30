@@ -30,10 +30,11 @@ let authEngine = {
         return "Room claimed by another host";
     }
 };
+let port = parseInt(process.env.PORT || "8081");
 const server = new server_1.LobbyServer({
     ws: {
         host: "0.0.0.0",
-        port: 8081,
+        port: port,
         path: "/lobby"
     },
     auth: authEngine
