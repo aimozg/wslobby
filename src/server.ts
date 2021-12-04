@@ -3,12 +3,14 @@
  * Confidential.
  */
 import {ClientRole, LobbyClient, LobbyClientState} from "./client";
-import {RawData, ServerOptions, WebSocketServer} from "ws";
+import {RawData, ServerOptions, WebSocket, WebSocketServer} from "ws";
 import {AddressInfo} from "net";
 import {Buffer} from "buffer";
 import {CLOSESTATUS} from "./utils";
 import {LobbyRoom} from "./room";
 import {wslobby} from "./wslobby";
+import * as expressWs from "express-ws";
+import {IncomingMessage} from "http";
 
 export interface LobbyAuth {
 	authClient(client:LobbyClient, identity:string, token:string, role:ClientRole):string|null;
@@ -30,6 +32,14 @@ export class LobbyServer {
 	}
 
 	constructor(options: LobbyServerOptions) {
+		this.authEngine = options.auth;
+
+		if (options.express) {
+			options.express.app.ws(options.path,(ws,req)=>{
+				this.onConnection(ws,req)
+			});
+			return;
+		}
 		if (options.ws instanceof WebSocketServer) {
 			this.ws = options.ws;
 		} else {
@@ -44,12 +54,16 @@ export class LobbyServer {
 			console.log("Listening on ws://"+address.address+":"+address.port+(ws.options.path||"/"))
 		});
 		ws.on("connection",(socket,request)=>{
-			let address = request.socket.remoteAddress+":"+request.socket.remotePort;
-			console.log("Incoming connection from "+address);
-			const client = new LobbyClient(this,socket,address);
-			this.limbo.push(client);
-			this.initClient(client);
+			this.onConnection(socket,request);
 		})
+	}
+
+	onConnection(socket:WebSocket,request:IncomingMessage){
+		let address = request.socket.remoteAddress+":"+request.socket.remotePort;
+		console.log("Incoming connection from "+address);
+		const client = new LobbyClient(this,socket,address);
+		this.limbo.push(client);
+		this.initClient(client);
 	}
 
 	initClient(client:LobbyClient) {
@@ -111,6 +125,8 @@ export class LobbyServer {
 }
 
 export interface LobbyServerOptions {
-	ws: WebSocketServer | ServerOptions;
+	ws?: WebSocketServer | ServerOptions;
+	path?: string;
+	express?: expressWs.Instance;
 	auth: LobbyAuth;
 }

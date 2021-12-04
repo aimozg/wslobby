@@ -16,6 +16,13 @@ class LobbyServer {
         this.limbo = [];
         this.clients = {};
         this.rooms = {};
+        this.authEngine = options.auth;
+        if (options.express) {
+            options.express.app.ws(options.path, (ws, req) => {
+                this.onConnection(ws, req);
+            });
+            return;
+        }
         if (options.ws instanceof ws_1.WebSocketServer) {
             this.ws = options.ws;
         }
@@ -29,11 +36,7 @@ class LobbyServer {
             console.log("Listening on ws://" + address.address + ":" + address.port + (ws.options.path || "/"));
         });
         ws.on("connection", (socket, request) => {
-            let address = request.socket.remoteAddress + ":" + request.socket.remotePort;
-            console.log("Incoming connection from " + address);
-            const client = new client_1.LobbyClient(this, socket, address);
-            this.limbo.push(client);
-            this.initClient(client);
+            this.onConnection(socket, request);
         });
     }
     client(id) {
@@ -41,6 +44,13 @@ class LobbyServer {
     }
     room(id) {
         return this.rooms[id];
+    }
+    onConnection(socket, request) {
+        let address = request.socket.remoteAddress + ":" + request.socket.remotePort;
+        console.log("Incoming connection from " + address);
+        const client = new client_1.LobbyClient(this, socket, address);
+        this.limbo.push(client);
+        this.initClient(client);
     }
     initClient(client) {
         client.socket.on("message", (rawData) => {

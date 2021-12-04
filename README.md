@@ -26,6 +26,7 @@ npm run start_windows
 
 (cmd)
 
+Will run a **trivial sticky auth** lobby server that also **serves static files** from `static/` directory.
 
 Environment variables:
 
@@ -33,6 +34,7 @@ Environment variables:
 * WSLOBBY_PORT (default env.PORT or 8081)
 * WSLOBBY_PATH (default `/lobby`)
 * WSLOBBY_STANDALONE (set to `true` if running library as a server)
+* WSLOBBY_BUNDLE_URL - zip file to download and extract into `static/`
 
 ## Building
 
