@@ -47,6 +47,7 @@ if (autostart) {
         const zipPath = "temp/bundle.zip";
         const bundleDir = "static/";
         // Cleanup
+        await fse.mkdirp(path.dirname(zipPath));
         if (await fse.pathExists(zipPath)) {
             await fse.promises.unlink(zipPath);
         }
