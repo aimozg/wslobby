@@ -4,54 +4,27 @@
  */
 
 
-import {ClientRole, LobbyClient} from "./src/client";
-import {LobbyAuth, LobbyServer} from "./src/server";
+import {LobbyClient} from "./src/client";
+import {LobbyServer} from "./src/server";
+import {defaultAuthEngine} from "./src/default-auth";
 
-console.log("Starting");
+export {LobbyClient,LobbyServer}
 
-let name2token = {
+let host = process.env.WSLOBBY_HOST || "0.0.0.0";
+let port = parseInt(process.env.WSLOBBY_PORT || process.env.PORT || "8081");
+let path = process.env.WSLOBBY_PATH || "/lobby";
+let autostart = process.env.WSLOBBY_STANDALONE == "true"
 
-} as {[index:string]:string};
-let room2host = {
+if (autostart) {
+	console.log("Starting");
 
-} as {[index:string]:string};
-let authEngine: LobbyAuth = {
-	authClient(client: LobbyClient, identity:string, token: string, role: ClientRole) {
-		if (!(identity in name2token)) {
-			name2token[identity] = token;
-			return null;
-		}
-		if (name2token[identity] === token) {
-			return null
-		}
-		return "Unauthorized"
-	},
-	authClaim(client: LobbyClient, room: string) {
-		if (!(room in room2host)) {
-			room2host[room] = client.identity;
-			return null;
-		}
-		if (room2host[room] === client.identity) {
-			return null;
-		}
-		return "Room claimed by another host";
-	}
-};
+	const server = new LobbyServer({
+		ws: {
+			host: host,
+			port: port,
+			path: path
+		},
+		auth: defaultAuthEngine
+	})
 
-let port = parseInt(process.env.PORT || "8081");
-const server = new LobbyServer({
-	ws: {
-		host: "0.0.0.0",
-		port: port,
-		path: "/lobby"
-	},
-	auth: authEngine
-})
-
-
-
-
-
-
-
-
+}

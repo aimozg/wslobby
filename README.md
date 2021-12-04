@@ -14,7 +14,25 @@ The WsLobby protocol is defined in Protobuf. See `src/wslobby.proto`.
 
 ## Running
 
-`node .`
+```
+npm run start
+```
+
+(bash)
+
+```
+npm run start_windows
+```
+
+(cmd)
+
+
+Environment variables:
+
+* WSLOBBY_HOST (default 0.0.0.0)
+* WSLOBBY_PORT (default env.PORT or 8081)
+* WSLOBBY_PATH (default `/lobby`)
+* WSLOBBY_STANDALONE (set to `true` if running library as a server)
 
 ## Building
 

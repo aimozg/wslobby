@@ -1,1 +1,1 @@
-web: node index.js
+web: WSLOBBY_STANDALONE=true node index.js

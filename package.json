@@ -19,6 +19,8 @@
     "ws": "^8.3.0"
   },
   "scripts": {
+    "start": "WSLOBBY_STANDALONE=true node .",
+    "start_windows": "set WSLOBBY_STANDALONE=true&&node .",
     "proto": "pbjs -t static-module -w commonjs -o src/wslobby.js src/wslobby.proto && pbts -o src/wslobby.d.ts src/wslobby.js",
     "browserify": "browserify src/wslobby.js --standalone wslobby > demo/wslobby.js"
   }
