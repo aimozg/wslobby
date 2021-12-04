@@ -60,7 +60,11 @@ if (autostart) {
 		if(await fse.pathExists(zipPath)) {
 			await fse.promises.unlink(zipPath)
 		}
-		await fse.emptyDir(bundleDir);
+		if(await fse.pathExists(bundleDir)) {
+			await fse.emptyDir(bundleDir);
+		} else {
+			await fse.mkdirp(bundleDir);
+		}
 
 		function unzip() {
 			yauzl.open(zipPath, {lazyEntries: true}, (err, zipfile) => {
