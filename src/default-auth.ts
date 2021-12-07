@@ -1,6 +1,5 @@
 /*
  * Created by aimozg on 04.12.2021.
- * Confidential.
  */
 import {LobbyAuth} from "./server";
 import {ClientRole, LobbyClient} from "./client";

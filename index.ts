@@ -1,6 +1,5 @@
 /*
  * Created by aimozg on 29.11.2021.
- * Confidential.
  */
 
 

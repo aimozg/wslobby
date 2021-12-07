@@ -1,6 +1,5 @@
 /*
  * Created by aimozg on 30.11.2021.
- * Confidential.
  */
 
 import {LobbyClient} from "./client";
