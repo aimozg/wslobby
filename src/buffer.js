@@ -1,7 +1,6 @@
 "use strict";
 /*
  * Created by aimozg on 30.11.2021.
- * Confidential.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BufferBuilder = void 0;

@@ -3,7 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.LobbyServer = void 0;
 /*
  * Created by aimozg on 29.11.2021.
- * Confidential.
  */
 const client_1 = require("./client");
 const ws_1 = require("ws");
