@@ -8,9 +8,8 @@ import {LobbyServer} from "./src/server";
 import {defaultAuthEngine} from "./src/default-auth";
 import * as fs from "fs";
 import * as fse from "fs-extra";
-import * as http from "http";
+import {http, https} from "follow-redirects";
 import {IncomingMessage} from "http";
-import * as https from "https";
 import * as yauzl from "yauzl";
 import express = require("express");
 import enableWs = require("express-ws");
@@ -129,6 +128,8 @@ if (autostart) {
 	}
 
 	if (bundleURL) {
-		downloadBundle().then(()=>{});
+		downloadBundle().then(()=>{}).catch(e=>{
+			console.error("Error downloading bundle:",e)
+		});
 	}
 }

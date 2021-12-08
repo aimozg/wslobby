@@ -11,8 +11,7 @@ Object.defineProperty(exports, "LobbyServer", { enumerable: true, get: function 
 const default_auth_1 = require("./src/default-auth");
 const fs = require("fs");
 const fse = require("fs-extra");
-const http = require("http");
-const https = require("https");
+const follow_redirects_1 = require("follow-redirects");
 const yauzl = require("yauzl");
 const express = require("express");
 const enableWs = require("express-ws");
@@ -109,10 +108,10 @@ if (autostart) {
             fs.unlink(zipPath, () => { });
         }
         if (/^http:/.test(bundleURL)) {
-            http.get(bundleURL, saveRequest).on("error", requestError);
+            follow_redirects_1.http.get(bundleURL, saveRequest).on("error", requestError);
         }
         else if (/^https:/.test(bundleURL)) {
-            https.get(bundleURL, saveRequest).on("error", requestError);
+            follow_redirects_1.https.get(bundleURL, saveRequest).on("error", requestError);
         }
         else {
             console.error("Bad bundle url", bundleURL);
@@ -120,7 +119,9 @@ if (autostart) {
         }
     }
     if (bundleURL) {
-        downloadBundle().then(() => { });
+        downloadBundle().then(() => { }).catch(e => {
+            console.error("Error downloading bundle:", e);
+        });
     }
 }
 //# sourceMappingURL=index.js.map
